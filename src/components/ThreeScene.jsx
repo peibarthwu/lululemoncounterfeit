@@ -249,7 +249,7 @@ const ThreeScene = () => {
             float noise = noiseStack(noiseCoord,3,0.4);
             float flames = pow(ypartClipped,0.3*xfuel)*pow(noise,0.3*xfuel);
     
-            float f = ypartClippedFalloff*pow(1.0-flames*flames*flames,8.0);
+            float f = ypartClippedFalloff*pow(1.0-flames*flames*flames,8.0) * uTime;
             float fff = f*f*f;
             float ff = f*f;
     
@@ -280,13 +280,23 @@ const ThreeScene = () => {
       renderer.setSize(innerWidth, innerHeight);
     }
 
+    const clock = new THREE.Clock();
+    const totalDuration = 13 * 60; // 13 minutes in seconds
+    let elapsedTime = 0; // Time elapsed in seconds
+
     function animate() {
       requestAnimationFrame(animate);
       composer.render();
       // renderer.render(scene, camera);
 
+      const delta = clock.getDelta(); // seconds since the last frame
+      elapsedTime += delta; // Update the total elapsed time
       if (customPass) {
-        customPass.uniforms.uTime.value += 0.01;
+        if (elapsedTime < totalDuration) {
+          customPass.uniforms.uTime.value = elapsedTime / totalDuration; // Normalize to range [0, 1]
+        } else {
+          customPass.uniforms.uTime.value = 1; // Cap at 1 after 13 minutes
+        }
         customPass.uniforms.uMouse.value = uMouse;
       }
     }
@@ -294,11 +304,14 @@ const ThreeScene = () => {
 
     const handleResize = () => {
       if (customPass) {
-        customPass.uniforms.resolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight);
+        customPass.uniforms.resolution.value = new THREE.Vector2(
+          window.innerWidth,
+          window.innerHeight
+        );
       }
     };
 
-    console.log("running setup")
+    console.log("running setup");
 
     // Attach the render function to the resize handler
     window.addEventListener("resize", handleResize);
@@ -308,7 +321,6 @@ const ThreeScene = () => {
 
       sceneRef.current.removeChild(renderer.domElement);
     };
-
   }, []);
 
   return (
