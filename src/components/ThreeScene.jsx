@@ -300,7 +300,7 @@ const ThreeScene = () => {
 
         // console.log(elapsedTime);
         if (elapsedTime > 3) {
-          console.log("staring");
+          // console.log("staring");
           if (customPass) {
             customPass.uniforms.uCount.value += 0.01; // Normalize to range [0, 1]
 
