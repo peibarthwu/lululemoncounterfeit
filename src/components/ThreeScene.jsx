@@ -7,12 +7,13 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 const ThreeScene = () => {
   const sceneRef = useRef(null);
   const canvasRef = useRef(null);
+  const requestFullscreen = useRef(null);
 
   useEffect(() => {
     let perspective = 10;
     let customPass;
     let uMouse = new THREE.Vector2(0, 0);
-    let LABEL_TEXT = "LULULEMON COUNTERFEIT";
+    let LABEL_TEXT = "ULULEMON COUNTERFEIT";
 
     const scene = new THREE.Scene();
 
@@ -43,6 +44,7 @@ const ThreeScene = () => {
     // Size our text canvas
     labelTextureCanvas.width = textureSize;
     labelTextureCanvas.height = textureSize;
+
     labelTextureCtx.textAlign = "center";
     labelTextureCtx.textBaseline = "middle";
     // Dynamic font size based on the texture size (based on the device capabilities)
@@ -60,7 +62,7 @@ const ThreeScene = () => {
 
     const labelMaterial = new THREE.MeshBasicMaterial({
       map: new THREE.CanvasTexture(labelTextureCanvas),
-      transparent: true,
+      // transparent: true,
     });
     // Create a plane mesh, add it to the scene
     const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
@@ -70,6 +72,7 @@ const ThreeScene = () => {
       uniforms: {
         tDiffuse: { value: null },
         uTime: { value: 0 },
+        uCount: { value: 0 },
         resolution: {
           value: new THREE.Vector2(window.innerWidth, window.innerHeight),
         },
@@ -88,6 +91,7 @@ const ThreeScene = () => {
         varying vec2 vUv;
         uniform vec2 uMouse;
         uniform float uTime;
+        uniform float uCount;
         uniform float uRadius;
         uniform float uXCells;
         uniform float uYCells;
@@ -231,7 +235,7 @@ const ThreeScene = () => {
           float xpart = fragCoord.x/resolution.x;
           float ypart = vUv.y/resolution.y;
       
-            float clip = 50.0;
+            float clip = 10.0;
             float ypartClip = vUv.y/clip;
             float ypartClippedFalloff = clamp(2.-ypartClip,0.0,1.0);
             float ypartClipped = min(ypartClip,1.);
@@ -241,7 +245,7 @@ const ThreeScene = () => {
             vec2 coordScaled = 0.01*fragCoord - 0.02*vec2(uXCells,0.0);
             vec3 position = vec3(coordScaled,0.0) + vec3(1223.0,6434.0,8425.0);
             vec3 flow = vec3(4.1*(0.5-xpart)*pow(ypartClippedn,4.0),-2.0*xfuel*pow(ypartClippedn,64.0),0.0);
-            vec3 timing = uTime*vec3(0.0,-1.7,1.1) + flow;
+            vec3 timing = uCount*vec3(0.0,-1.7,1.1) + flow;
     
             vec3 displacePos = vec3(1.0,0.5,1.0)*2.4*position+uTime*vec3(0.01,-0.7,1.3);
             vec3 displace3 = vec3(noiseStackUV(displacePos,2,0.4,0.1),0.0);
@@ -249,12 +253,13 @@ const ThreeScene = () => {
             float noise = noiseStack(noiseCoord,3,0.4);
             float flames = pow(ypartClipped,0.3*xfuel)*pow(noise,0.3*xfuel);
     
-            float f = ypartClippedFalloff*pow(1.0-flames*flames*flames,8.0) * uTime;
+            float f = ypartClippedFalloff*pow(1.0-flames*flames*flames,8.0) * uTime * 0.5;
             float fff = f*f*f;
             float ff = f*f;
     
             vec4 inputColor = texture2D(tDiffuse, vUv);
-            vec3 fire = 1.2*vec3(fff*fff - inputColor.x, ff, f);
+            vec3 fire = 1.2*vec3(fff*fff + (inputColor.y * uTime), ff, f);
+           
             vec4 color = vec4(fire/pos.y+0.5,  1.);
             gl_FragColor = color;
         }`,
@@ -281,23 +286,31 @@ const ThreeScene = () => {
     }
 
     const clock = new THREE.Clock();
-    const totalDuration = 13 * 60; // 13 minutes in seconds
+    const totalDuration = 30 * 60 + 60; // x min * 60
     let elapsedTime = 0; // Time elapsed in seconds
 
     function animate() {
       requestAnimationFrame(animate);
       composer.render();
-      // renderer.render(scene, camera);
 
       const delta = clock.getDelta(); // seconds since the last frame
       elapsedTime += delta; // Update the total elapsed time
-      if (customPass) {
-        if (elapsedTime < totalDuration) {
-          customPass.uniforms.uTime.value = elapsedTime / totalDuration; // Normalize to range [0, 1]
-        } else {
-          customPass.uniforms.uTime.value = 1; // Cap at 1 after 13 minutes
+
+      // console.log(elapsedTime);
+      if (elapsedTime > 3) {
+        if (customPass) {
+          customPass.uniforms.uCount.value += 0.01; // Normalize to range [0, 1]
+
+          // Clamp elapsed time to not exceed totalDuration
+          elapsedTime = Math.min(elapsedTime, totalDuration);
+
+          // Normalize elapsedTime to [0, 1]
+          const normalizedTime = elapsedTime / totalDuration;
+          // console.log({ normalizedTime });
+
+          // Apply cubic function (normalizedTime^3)
+          customPass.uniforms.uTime.value = normalizedTime ** 3; // Cubic increase
         }
-        customPass.uniforms.uMouse.value = uMouse;
       }
     }
     animate();
@@ -313,6 +326,23 @@ const ThreeScene = () => {
 
     console.log("running setup");
 
+    const fullscreenBtn = requestFullscreen.current;
+
+    fullscreenBtn.addEventListener("click", () => {
+      if (sceneRef.current.requestFullscreen) {
+        sceneRef.current.requestFullscreen();
+      } else if (canvsceneRef.currentas.mozRequestFullScreen) {
+        // Firefox
+        sceneRef.current.mozRequestFullScreen();
+      } else if (sceneRef.current.webkitRequestFullscreen) {
+        // Chrome, Safari and Opera
+        sceneRef.current.webkitRequestFullscreen();
+      } else if (sceneRef.current.msRequestFullscreen) {
+        // IE/Edge
+        sceneRef.current.msRequestFullscreen();
+      }
+    });
+
     // Attach the render function to the resize handler
     window.addEventListener("resize", handleResize);
 
@@ -325,6 +355,9 @@ const ThreeScene = () => {
 
   return (
     <>
+      <button ref={requestFullscreen} id="fullscreenBtn">
+        Go Fullscreen
+      </button>
       <div ref={sceneRef} className="fixed inset-0" />
       <canvas
         ref={canvasRef}
