@@ -10,6 +10,7 @@ const ThreeScene = () => {
   const requestFullscreen = useRef(null);
 
   useEffect(() => {
+    let ready = false;
     let perspective = 10;
     let customPass;
     let uMouse = new THREE.Vector2(0, 0);
@@ -293,23 +294,26 @@ const ThreeScene = () => {
       requestAnimationFrame(animate);
       composer.render();
 
-      const delta = clock.getDelta(); // seconds since the last frame
-      elapsedTime += delta; // Update the total elapsed time
+      if (ready) {
+        const delta = clock.getDelta(); // seconds since the last frame
+        elapsedTime += delta; // Update the total elapsed time
 
-      // console.log(elapsedTime);
-      if (elapsedTime > 3) {
-        if (customPass) {
-          customPass.uniforms.uCount.value += 0.01; // Normalize to range [0, 1]
+        // console.log(elapsedTime);
+        if (elapsedTime > 3) {
+          console.log("staring");
+          if (customPass) {
+            customPass.uniforms.uCount.value += 0.01; // Normalize to range [0, 1]
 
-          // Clamp elapsed time to not exceed totalDuration
-          elapsedTime = Math.min(elapsedTime, totalDuration);
+            // Clamp elapsed time to not exceed totalDuration
+            elapsedTime = Math.min(elapsedTime, totalDuration);
 
-          // Normalize elapsedTime to [0, 1]
-          const normalizedTime = elapsedTime / totalDuration;
-          // console.log({ normalizedTime });
+            // Normalize elapsedTime to [0, 1]
+            const normalizedTime = elapsedTime / totalDuration;
+            // console.log({ normalizedTime });
 
-          // Apply cubic function (normalizedTime^3)
-          customPass.uniforms.uTime.value = normalizedTime ** 3; // Cubic increase
+            // Apply cubic function (normalizedTime^3)
+            customPass.uniforms.uTime.value = normalizedTime ** 3; // Cubic increase
+          }
         }
       }
     }
@@ -329,6 +333,7 @@ const ThreeScene = () => {
     const fullscreenBtn = requestFullscreen.current;
 
     fullscreenBtn.addEventListener("click", () => {
+      ready = true;
       if (sceneRef.current.requestFullscreen) {
         sceneRef.current.requestFullscreen();
       } else if (canvsceneRef.currentas.mozRequestFullScreen) {
